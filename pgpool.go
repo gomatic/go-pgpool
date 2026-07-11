@@ -34,7 +34,7 @@ type poolOpener func(context.Context, *pgxpool.Config) (*pgxpool.Pool, error)
 // adapts (*pgxpool.Pool).Ping to it while tests substitute a fake.
 type poolPinger func(context.Context, *pgxpool.Pool) error
 
-// ConnectDB creates a pgx v5 connection pool configured for CockroachDB
+// Connect creates a pgx v5 connection pool configured for CockroachDB
 // or PostgreSQL.
 //
 // When databaseURL is empty, pgx uses the standard libpq environment
@@ -45,8 +45,8 @@ type poolPinger func(context.Context, *pgxpool.Pool) error
 // When databaseURL is set, it overrides the env vars (URL form:
 // postgres://user:pass@host:port/db?sslmode=disable, or libpq KV form:
 // "host=localhost port=5432 user=alice dbname=xto sslmode=disable").
-func ConnectDB(ctx context.Context, databaseURL ConnectionString) (*pgxpool.Pool, error) {
-	return connectDB(ctx, databaseURL, pgxpool.NewWithConfig, pingPool)
+func Connect(ctx context.Context, databaseURL ConnectionString) (*pgxpool.Pool, error) {
+	return connect(ctx, databaseURL, pgxpool.NewWithConfig, pingPool)
 }
 
 // pingPool adapts the (*pgxpool.Pool).Ping method to the context-first
@@ -55,9 +55,9 @@ func pingPool(ctx context.Context, pool *pgxpool.Pool) error {
 	return pool.Ping(ctx)
 }
 
-// connectDB is the dependency-injected core of ConnectDB. The exported wrapper
+// connect is the dependency-injected core of Connect. The exported wrapper
 // supplies the production pool opener and pinger.
-func connectDB(
+func connect(
 	ctx context.Context,
 	databaseURL ConnectionString,
 	open poolOpener,
@@ -101,20 +101,20 @@ func buildPoolConfig(databaseURL ConnectionString) (*pgxpool.Config, error) {
 	return cfg, nil
 }
 
-// DBHealthChecker implements health checking against a pgxpool.Pool.
+// HealthChecker implements health checking against a pgxpool.Pool.
 // It satisfies the common health-checker interface shape (Name() string,
 // Check(ctx context.Context) error).
-type DBHealthChecker struct {
+type HealthChecker struct {
 	Pool *pgxpool.Pool
 }
 
 // Name returns the identifier for this health check.
-func (h DBHealthChecker) Name() string {
+func (h HealthChecker) Name() string {
 	return "database"
 }
 
 // Check pings the database pool to verify connectivity.
-func (h DBHealthChecker) Check(ctx context.Context) error {
+func (h HealthChecker) Check(ctx context.Context) error {
 	return checkHealth(ctx, h.Pool.Ping)
 }
 

@@ -72,9 +72,9 @@ func TestConnectDBParseError(t *testing.T) {
 	}
 	okPing := func(context.Context, *pgxpool.Pool) error { return nil }
 
-	_, err := connectDB(context.Background(), "://bad", failOpen, okPing)
+	_, err := connect(context.Background(), "://bad", failOpen, okPing)
 	if !errors.Is(err, ErrParseDatabaseConfig) {
-		t.Fatalf("connectDB error = %v, want %v", err, ErrParseDatabaseConfig)
+		t.Fatalf("connect error = %v, want %v", err, ErrParseDatabaseConfig)
 	}
 }
 
@@ -86,12 +86,12 @@ func TestConnectDBOpenError(t *testing.T) {
 	}
 	okPing := func(context.Context, *pgxpool.Pool) error { return nil }
 
-	_, err := connectDB(context.Background(), "postgres://u@127.0.0.1:5432/db", open, okPing)
+	_, err := connect(context.Background(), "postgres://u@127.0.0.1:5432/db", open, okPing)
 	if !errors.Is(err, ErrCreateConnectionPool) {
-		t.Fatalf("connectDB error = %v, want %v", err, ErrCreateConnectionPool)
+		t.Fatalf("connect error = %v, want %v", err, ErrCreateConnectionPool)
 	}
 	if !errors.Is(err, errBoom) {
-		t.Fatalf("connectDB error = %v, want wrapped cause %v", err, errBoom)
+		t.Fatalf("connect error = %v, want wrapped cause %v", err, errBoom)
 	}
 }
 
@@ -104,12 +104,12 @@ func TestConnectDBPingError(t *testing.T) {
 	}
 	failPing := func(context.Context, *pgxpool.Pool) error { return errBoom }
 
-	_, err := connectDB(context.Background(), "postgres://u@127.0.0.1:5432/db", open, failPing)
+	_, err := connect(context.Background(), "postgres://u@127.0.0.1:5432/db", open, failPing)
 	if !errors.Is(err, ErrPingDatabase) {
-		t.Fatalf("connectDB error = %v, want %v", err, ErrPingDatabase)
+		t.Fatalf("connect error = %v, want %v", err, ErrPingDatabase)
 	}
 	if !errors.Is(err, errBoom) {
-		t.Fatalf("connectDB error = %v, want wrapped cause %v", err, errBoom)
+		t.Fatalf("connect error = %v, want wrapped cause %v", err, errBoom)
 	}
 }
 
@@ -123,23 +123,23 @@ func TestConnectDBSuccess(t *testing.T) {
 	}
 	okPing := func(context.Context, *pgxpool.Pool) error { return nil }
 
-	got, err := connectDB(context.Background(), "postgres://u@127.0.0.1:5432/db", open, okPing)
+	got, err := connect(context.Background(), "postgres://u@127.0.0.1:5432/db", open, okPing)
 	if err != nil {
-		t.Fatalf("connectDB unexpected error: %v", err)
+		t.Fatalf("connect unexpected error: %v", err)
 	}
 	if got != pool {
-		t.Fatalf("connectDB returned %p, want %p", got, pool)
+		t.Fatalf("connect returned %p, want %p", got, pool)
 	}
 }
 
 func TestConnectDBWrapperParseError(t *testing.T) {
 	t.Parallel()
 
-	// Exercises the exported ConnectDB wrapper; an invalid URL fails before any
+	// Exercises the exported Connect wrapper; an invalid URL fails before any
 	// connection is attempted.
-	_, err := ConnectDB(context.Background(), "://bad")
+	_, err := Connect(context.Background(), "://bad")
 	if !errors.Is(err, ErrParseDatabaseConfig) {
-		t.Fatalf("ConnectDB error = %v, want %v", err, ErrParseDatabaseConfig)
+		t.Fatalf("Connect error = %v, want %v", err, ErrParseDatabaseConfig)
 	}
 }
 
@@ -158,7 +158,7 @@ func TestPingPoolUnreachable(t *testing.T) {
 func TestDBHealthCheckerName(t *testing.T) {
 	t.Parallel()
 
-	h := DBHealthChecker{}
+	h := HealthChecker{}
 	if got := h.Name(); got != "database" {
 		t.Fatalf("Name() = %q, want %q", got, "database")
 	}
@@ -188,12 +188,12 @@ func TestCheckHealthFailure(t *testing.T) {
 func TestDBHealthCheckerCheckDelegates(t *testing.T) {
 	t.Parallel()
 
-	// DBHealthChecker.Check delegates to h.Pool.Ping. Against an unconnected
+	// HealthChecker.Check delegates to h.Pool.Ping. Against an unconnected
 	// pool with a short deadline the ping fails, exercising the wired method
 	// value and confirming the error is wrapped as ErrDatabaseHealthCheck.
 	pool := newUnconnectedPool(t)
 	t.Cleanup(pool.Close)
-	h := DBHealthChecker{Pool: pool}
+	h := HealthChecker{Pool: pool}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()

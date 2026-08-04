@@ -3,7 +3,7 @@ module github.com/gomatic/go-pgpool
 go 1.26.4
 
 require (
-	github.com/gomatic/go-error v0.3.10
+	github.com/gomatic/go-error v0.3.13
 	github.com/jackc/pgx/v5 v5.10.0
 )
 
